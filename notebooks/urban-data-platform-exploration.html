@@ -1,0 +1,717 @@
+<!doctype html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"><meta name="referrer" content="strict-origin-when-cross-origin"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Saugat Bhattarai — biomedical engineer, KTH Data-driven Health student. Selected work in medical imaging, machine learning and data engineering."><title>exploration — Saugat Bhattarai</title><link rel="stylesheet" href="../style.css"><script src="../theme.js"></script></head><body><a class="skip" href="#content">Skip to content</a><header class="site-header"><a class="wordmark" href="../index.html">saugat<span>.bhattarai</span><i> / </i></a><nav aria-label="Main"><a href="../index.html#work">Work</a><a href="../index.html#background">Background</a><a href="../index.html#about">About</a></nav><button class="theme-toggle" aria-label="Switch color theme" title="Switch light and dark theme">◐ <span>Theme</span></button></header><main id="content"><a class="back" href="../index.html#work">← Project library</a><div class="page-heading"><span class="kicker">RESEARCH NOTEBOOK</span><h1>exploration</h1><p>Code, explanations and saved outputs. This is a static reading view; cells are not executed here.</p><a class="button secondary" download href="urban-data-platform-exploration.ipynb">Download notebook ↓</a></div><details class="contents"><summary>Notebook contents</summary><a href="#cell-6">Checking for candiate Primary Keys</a><a href="#cell-16">Checking for Categorical Column</a><a href="#cell-21">Task 2</a><a href="#cell-23">Task 5</a></details><div class="notebook"><section class="nb-code"><span class="cell-label">In [5]</span><pre><code>import sys
+import os
+import pandas as pd
+from pathlib import Path</code></pre></section><section class="nb-code"><span class="cell-label">In [6]</span><pre><code># Project setup
+PROJECT_ROOT = Path.cwd()
+while not (PROJECT_ROOT / &quot;data&quot; / &quot;raw&quot;).exists() and PROJECT_ROOT != PROJECT_ROOT.parent:
+    PROJECT_ROOT = PROJECT_ROOT.parent
+
+os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(PROJECT_ROOT / &quot;src&quot;))</code></pre></section><section class="nb-markdown" id="cell-3"><ul>
+<li>Show what columns exist and what a few rows look like</li>
+<li>Followed this as a rule of thumb: peek with pandas, process with Spark.</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [54]</span><pre><code>for name in [&quot;air_quality&quot;, &quot;weather&quot;, &quot;taxi_zones&quot;]:
+    folder = Path(&quot;data/raw&quot;) / name
+    files = sorted(folder.glob(&quot;*.csv&quot;))
+    print(f&quot;--{name}: {[f.name for f in files]}--&quot;)
+
+    df = pd.read_csv(files[0])
+    print(&quot;Columns:&quot;, list(df.columns))
+    print(df.head(3))
+    print()</code></pre><pre class="output">--air_quality: [&#x27;hourly_88101_2024.csv&#x27;]--
+</pre><pre class="output">C:\Users\user\AppData\Local\Temp\ipykernel_15012\2954518178.py:6: DtypeWarning: Columns (0: Qualifier) have mixed types. Specify dtype option on import or set low_memory=False.
+  df = pd.read_csv(files[0])
+</pre><pre class="output">Columns: [&#x27;State Code&#x27;, &#x27;County Code&#x27;, &#x27;Site Num&#x27;, &#x27;Parameter Code&#x27;, &#x27;POC&#x27;, &#x27;Latitude&#x27;, &#x27;Longitude&#x27;, &#x27;Datum&#x27;, &#x27;Parameter Name&#x27;, &#x27;Date Local&#x27;, &#x27;Time Local&#x27;, &#x27;Date GMT&#x27;, &#x27;Time GMT&#x27;, &#x27;Sample Measurement&#x27;, &#x27;Units of Measure&#x27;, &#x27;MDL&#x27;, &#x27;Uncertainty&#x27;, &#x27;Qualifier&#x27;, &#x27;Method Type&#x27;, &#x27;Method Code&#x27;, &#x27;Method Name&#x27;, &#x27;State Name&#x27;, &#x27;County Name&#x27;, &#x27;Date of Last Change&#x27;]
+   State Code  County Code  Site Num  Parameter Code  POC   Latitude  \
+0           1            3        10           88101    3  30.497478   
+1           1            3        10           88101    3  30.497478   
+2           1            3        10           88101    3  30.497478   
+
+   Longitude  Datum            Parameter Name  Date Local  ...  \
+0 -87.880258  NAD83  PM2.5 - Local Conditions  2024-01-02  ...   
+1 -87.880258  NAD83  PM2.5 - Local Conditions  2024-01-02  ...   
+2 -87.880258  NAD83  PM2.5 - Local Conditions  2024-01-02  ...   
+
+              Units of Measure  MDL Uncertainty  Qualifier Method Type  \
+0  Micrograms/cubic meter (LC)  5.0         NaN        NaN         FEM   
+1  Micrograms/cubic meter (LC)  5.0         NaN        NaN         FEM   
+2  Micrograms/cubic meter (LC)  5.0         NaN        NaN         FEM   
+
+   Method Code                                        Method Name State Name  \
+0          209  Met One BAM-1022 Mass Monitor w/ VSCC or TE-PM...    Alabama   
+1          209  Met One BAM-1022 Mass Monitor w/ VSCC or TE-PM...    Alabama   
+2          209  Met One BAM-1022 Mass Monitor w/ VSCC or TE-PM...    Alabama   
+
+  County Name  Date of Last Change  
+0     Baldwin           2024-07-19  
+1     Baldwin           2024-07-19  
+2     Baldwin           2024-07-19  
+
+[3 rows x 24 columns]
+
+--weather: [&#x27;weather.csv&#x27;]--
+Columns: [&#x27;year&#x27;, &#x27;month&#x27;, &#x27;day&#x27;, &#x27;hour&#x27;, &#x27;temp&#x27;, &#x27;temp_source&#x27;, &#x27;rhum&#x27;, &#x27;rhum_source&#x27;, &#x27;prcp&#x27;, &#x27;prcp_source&#x27;, &#x27;snwd&#x27;, &#x27;snwd_source&#x27;, &#x27;wdir&#x27;, &#x27;wdir_source&#x27;, &#x27;wspd&#x27;, &#x27;wspd_source&#x27;, &#x27;wpgt&#x27;, &#x27;wpgt_source&#x27;, &#x27;pres&#x27;, &#x27;pres_source&#x27;, &#x27;cldc&#x27;, &#x27;cldc_source&#x27;, &#x27;coco&#x27;, &#x27;coco_source&#x27;]
+   year  month  day  hour  temp temp_source  rhum rhum_source  prcp  \
+0  2024      1    1     0   6.1    isd_lite    47    isd_lite   0.0   
+1  2024      1    1     1   6.1    isd_lite    45    isd_lite   0.0   
+2  2024      1    1     2   6.1    isd_lite    47    isd_lite   0.0   
+
+  prcp_source  ...  wspd  wspd_source  wpgt wpgt_source    pres pres_source  \
+0  dwd_mosmix  ...   9.4     isd_lite   NaN         NaN  1015.8    isd_lite   
+1    isd_lite  ...  13.0     isd_lite   NaN         NaN  1015.8    isd_lite   
+2    isd_lite  ...  13.0     isd_lite   NaN         NaN  1015.7    isd_lite   
+
+   cldc  cldc_source  coco coco_source  
+0     8     isd_lite   3.0  dwd_mosmix  
+1     7   dwd_mosmix   3.0  dwd_mosmix  
+2     8   dwd_mosmix   3.0  dwd_mosmix  
+
+[3 rows x 24 columns]
+
+--taxi_zones: [&#x27;taxi_zone_lookup.csv&#x27;]--
+Columns: [&#x27;LocationID&#x27;, &#x27;Borough&#x27;, &#x27;Zone&#x27;, &#x27;service_zone&#x27;]
+   LocationID Borough                     Zone service_zone
+0           1     EWR           Newark Airport          EWR
+1           2  Queens              Jamaica Bay    Boro Zone
+2           3   Bronx  Allerton/Pelham Gardens    Boro Zone
+
+</pre></section><section class="nb-code"><span class="cell-label">In [56]</span><pre><code>from src.common.spark_session import get_spark
+
+spark = get_spark()
+
+trips = spark.read.parquet(&quot;data/raw/taxi_trips&quot;)
+print(&quot;Rows:&quot;, trips.count())
+trips.printSchema()
+trips.show(3, truncate=False)</code></pre><pre class="output">Rows: 9554778
+root
+ |-- VendorID: integer (nullable = true)
+ |-- tpep_pickup_datetime: timestamp_ntz (nullable = true)
+ |-- tpep_dropoff_datetime: timestamp_ntz (nullable = true)
+ |-- passenger_count: long (nullable = true)
+ |-- trip_distance: double (nullable = true)
+ |-- RatecodeID: long (nullable = true)
+ |-- store_and_fwd_flag: string (nullable = true)
+ |-- PULocationID: integer (nullable = true)
+ |-- DOLocationID: integer (nullable = true)
+ |-- payment_type: long (nullable = true)
+ |-- fare_amount: double (nullable = true)
+ |-- extra: double (nullable = true)
+ |-- mta_tax: double (nullable = true)
+ |-- tip_amount: double (nullable = true)
+ |-- tolls_amount: double (nullable = true)
+ |-- improvement_surcharge: double (nullable = true)
+ |-- total_amount: double (nullable = true)
+ |-- congestion_surcharge: double (nullable = true)
+ |-- Airport_fee: double (nullable = true)
+
++--------+--------------------+---------------------+---------------+-------------+----------+------------------+------------+------------+------------+-----------+-----+-------+----------+------------+---------------------+------------+--------------------+-----------+
+|VendorID|tpep_pickup_datetime|tpep_dropoff_datetime|passenger_count|trip_distance|RatecodeID|store_and_fwd_flag|PULocationID|DOLocationID|payment_type|fare_amount|extra|mta_tax|tip_amount|tolls_amount|improvement_surcharge|total_amount|congestion_surcharge|Airport_fee|
++--------+--------------------+---------------------+---------------+-------------+----------+------------------+------------+------------+------------+-----------+-----+-------+----------+------------+---------------------+------------+--------------------+-----------+
+|2       |2024-01-01 00:57:55 |2024-01-01 01:17:43  |1              |1.72         |1         |N                 |186         |79          |2           |17.7       |1.0  |0.5    |0.0       |0.0         |1.0                  |22.7        |2.5                 |0.0        |
+|1       |2024-01-01 00:03:00 |2024-01-01 00:09:36  |1              |1.8          |1         |N                 |140         |236         |1           |10.0       |3.5  |0.5    |3.75      |0.0         |1.0                  |18.75       |2.5                 |0.0        |
+|1       |2024-01-01 00:17:06 |2024-01-01 00:35:01  |1              |4.7          |1         |N                 |236         |79          |1           |23.3       |3.5  |0.5    |3.0       |0.0         |1.0                  |31.3        |2.5                 |0.0        |
++--------+--------------------+---------------------+---------------+-------------+----------+------------------+------------+------------+------------+-----------+-----+-------+----------+------------+---------------------+------------+--------------------+-----------+
+only showing top 3 rows
+
+</pre></section><section class="nb-markdown" id="cell-6"><h3>Checking for candiate Primary Keys</h3></section><section class="nb-code"><span class="cell-label">In [58]</span><pre><code>from pyspark.sql import functions as F
+
+taxi_key = [
+    &quot;VendorID&quot;,
+    &quot;tpep_pickup_datetime&quot;,
+    &quot;tpep_dropoff_datetime&quot;,
+    &quot;PULocationID&quot;,
+    &quot;DOLocationID&quot;
+]
+
+trips.groupBy(taxi_key).count() \
+    .filter(F.col(&quot;count&quot;) &gt; 1) \
+    .show(10)</code></pre><pre class="output">+--------+--------------------+---------------------+------------+------------+-----+
+|VendorID|tpep_pickup_datetime|tpep_dropoff_datetime|PULocationID|DOLocationID|count|
++--------+--------------------+---------------------+------------+------------+-----+
+|       2| 2024-01-01 00:04:00|  2024-01-01 00:04:44|          63|          63|    2|
+|       2| 2024-01-01 00:42:02|  2024-01-01 01:14:33|         107|          61|    2|
+|       2| 2024-01-01 00:38:59|  2024-01-01 00:40:05|          68|          68|    2|
+|       2| 2024-01-01 00:35:48|  2024-01-01 00:47:28|         234|         125|    2|
+|       2| 2024-01-01 00:40:25|  2024-01-01 00:46:13|          68|          68|    2|
+|       2| 2024-01-01 00:46:42|  2024-01-01 01:34:57|           4|         143|    2|
+|       2| 2024-01-01 00:28:40|  2024-01-01 00:50:44|         229|         129|    2|
+|       2| 2024-01-01 00:18:50|  2024-01-01 00:35:33|         148|         170|    2|
+|       2| 2024-01-01 01:14:09|  2024-01-01 02:00:27|         164|         250|    2|
+|       2| 2024-01-01 01:31:34|  2024-01-01 01:33:08|         146|         193|    2|
++--------+--------------------+---------------------+------------+------------+-----+
+only showing top 10 rows
+
+</pre></section><section class="nb-code"><span class="cell-label">In [64]</span><pre><code>trips.groupBy(taxi_key).count() \
+    .filter(F.col(&quot;count&quot;) &gt; 1) \
+    .count()</code></pre><pre class="output">101646</pre></section><section class="nb-code"><span class="cell-label">In [65]</span><pre><code>trips.filter(
+    (F.col(&quot;VendorID&quot;) == 2) &amp;
+    (F.col(&quot;tpep_pickup_datetime&quot;) == &quot;2024-01-01 00:04:00&quot;) &amp;
+    (F.col(&quot;tpep_dropoff_datetime&quot;) == &quot;2024-01-01 00:04:44&quot;) &amp;
+    (F.col(&quot;PULocationID&quot;) == 63) &amp;
+    (F.col(&quot;DOLocationID&quot;) == 63)
+).show(truncate=False)</code></pre><pre class="output">+--------+--------------------+---------------------+---------------+-------------+----------+------------------+------------+------------+------------+-----------+-----+-------+----------+------------+---------------------+------------+--------------------+-----------+
+|VendorID|tpep_pickup_datetime|tpep_dropoff_datetime|passenger_count|trip_distance|RatecodeID|store_and_fwd_flag|PULocationID|DOLocationID|payment_type|fare_amount|extra|mta_tax|tip_amount|tolls_amount|improvement_surcharge|total_amount|congestion_surcharge|Airport_fee|
++--------+--------------------+---------------------+---------------+-------------+----------+------------------+------------+------------+------------+-----------+-----+-------+----------+------------+---------------------+------------+--------------------+-----------+
+|2       |2024-01-01 00:04:00 |2024-01-01 00:04:44  |1              |0.01         |5         |N                 |63          |63          |2           |-31.5      |0.0  |0.0    |0.0       |0.0         |-1.0                 |-34.25      |0.0                 |-1.75      |
+|2       |2024-01-01 00:04:00 |2024-01-01 00:04:44  |1              |0.01         |5         |N                 |63          |63          |2           |31.5       |0.0  |0.0    |0.0       |0.0         |1.0                  |34.25       |0.0                 |1.75       |
++--------+--------------------+---------------------+---------------+-------------+----------+------------------+------------+------------+------------+-----------+-----+-------+----------+------------+---------------------+------------+--------------------+-----------+
+
+</pre></section><section class="nb-markdown" id="cell-10"><ul>
+<li>Primary key: No explicit primary key is provided in the dataset. The available attributes do not guarantee unique identification of individual trips.</li>
+<li>The Taxi Trips dataset contains multiple records sharing the same apparent trip-identifying attributes, so uniqueness cannot be assumed.</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [61]</span><pre><code>weather_df = pd.read_csv(&quot;data/raw/weather/weather.csv&quot;)
+weather_key = [&quot;year&quot;, &quot;month&quot;, &quot;day&quot;, &quot;hour&quot;]
+
+duplicates = weather_df.duplicated(subset=weather_key).sum()
+
+print(&quot;Duplicate records:&quot;, duplicates)
+print(&quot;Nulls:&quot;)
+print(weather_df[weather_key].isna().sum())</code></pre><pre class="output">Duplicate records: 0
+Nulls:
+year     0
+month    0
+day      0
+hour     0
+dtype: int64
+</pre></section><section class="nb-markdown" id="cell-12"><ul>
+<li>Each combination identifies exactly one hourly weather observation.</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [62]</span><pre><code>air_df = pd.read_csv(&quot;data/raw/air_quality/hourly_88101_2024.csv&quot;)
+air_key = [
+    &quot;State Code&quot;,
+    &quot;County Code&quot;,
+    &quot;Site Num&quot;,
+    &quot;Parameter Code&quot;,
+    &quot;POC&quot;,
+    &quot;Date Local&quot;,
+    &quot;Time Local&quot;
+]
+
+duplicates = air_df.duplicated(subset=air_key).sum()
+
+print(&quot;Duplicate records:&quot;, duplicates)
+print(&quot;Nulls:&quot;)
+print(air_df[air_key].isna().sum())</code></pre><pre class="output">C:\Users\user\AppData\Local\Temp\ipykernel_15012\463234392.py:1: DtypeWarning: Columns (0: Qualifier) have mixed types. Specify dtype option on import or set low_memory=False.
+  air_df = pd.read_csv(&quot;data/raw/air_quality/hourly_88101_2024.csv&quot;)
+</pre><pre class="output">Duplicate records: 0
+Nulls:
+State Code        0
+County Code       0
+Site Num          0
+Parameter Code    0
+POC               0
+Date Local        0
+Time Local        0
+dtype: int64
+</pre></section><section class="nb-markdown" id="cell-14"><ul>
+<li>The elements in the list <code>air key</code> can be treated as Primary Keys.</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [63]</span><pre><code>zones_df = pd.read_csv(&quot;data/raw/taxi_zones/taxi_zone_lookup.csv&quot;)
+print(&quot;Duplicate LocationIDs:&quot;,zones_df[&quot;LocationID&quot;].duplicated().sum())
+print(&quot;Null LocationIDs:&quot;,zones_df[&quot;LocationID&quot;].isna().sum())</code></pre><pre class="output">Duplicate LocationIDs: 0
+Null LocationIDs: 0
+</pre></section><section class="nb-markdown" id="cell-16"><h3>Checking for Categorical Column</h3></section><section class="nb-code"><span class="cell-label">In [73]</span><pre><code>for col in [&quot;VendorID&quot;, &quot;RatecodeID&quot;, &quot;store_and_fwd_flag&quot;,
+            &quot;PULocationID&quot;, &quot;DOLocationID&quot;, &quot;payment_type&quot;]:
+    print(f&quot;\n{col}&quot;)
+    trips.select(col).distinct().show(20)</code></pre><pre class="output">
+VendorID
++--------+
+|VendorID|
++--------+
+|       1|
+|       2|
+|       6|
++--------+
+
+
+RatecodeID
++----------+
+|RatecodeID|
++----------+
+|         2|
+|        99|
+|         3|
+|         5|
+|         4|
+|         1|
+|         6|
+|      NULL|
++----------+
+
+
+store_and_fwd_flag
++------------------+
+|store_and_fwd_flag|
++------------------+
+|                 N|
+|                 Y|
+|              NULL|
++------------------+
+
+
+PULocationID
++------------+
+|PULocationID|
++------------+
+|         186|
+|         148|
+|         161|
+|         107|
+|         263|
+|         233|
+|         232|
+|          13|
+|         261|
+|          70|
+|         265|
+|          14|
+|          12|
+|         190|
+|          93|
+|          18|
+|         198|
+|         202|
+|         225|
+|         157|
++------------+
+only showing top 20 rows
+
+
+DOLocationID
++------------+
+|DOLocationID|
++------------+
+|         148|
+|         261|
+|         190|
+|         263|
+|         265|
+|         171|
+|         107|
+|         202|
+|         232|
+|         161|
+|         233|
+|         186|
+|          13|
+|          14|
+|          67|
+|         225|
+|         198|
+|         257|
+|          70|
+|         218|
++------------+
+only showing top 20 rows
+
+
+payment_type
++------------+
+|payment_type|
++------------+
+|           2|
+|           3|
+|           4|
+|           1|
+|           0|
++------------+
+
+</pre></section><section class="nb-code"><span class="cell-label">In [74]</span><pre><code>for col in [
+    &quot;temp_source&quot;,
+    &quot;rhum_source&quot;,
+    &quot;prcp_source&quot;,
+    &quot;snwd_source&quot;,
+    &quot;wdir_source&quot;,
+    &quot;wspd_source&quot;,
+    &quot;wpgt_source&quot;,
+    &quot;pres_source&quot;,
+    &quot;cldc_source&quot;,
+    &quot;coco&quot;
+]:
+    print(f&quot;\n{col}&quot;)
+    print(weather_df[col].value_counts(dropna=False))</code></pre><pre class="output">
+temp_source
+temp_source
+isd_lite    8774
+metar         10
+Name: count, dtype: int64
+
+rhum_source
+rhum_source
+isd_lite    8774
+metar         10
+Name: count, dtype: int64
+
+prcp_source
+prcp_source
+isd_lite      8657
+dwd_mosmix     127
+Name: count, dtype: int64
+
+snwd_source
+snwd_source
+NaN    8784
+Name: count, dtype: int64
+
+wdir_source
+wdir_source
+isd_lite      8626
+metar          117
+dwd_mosmix      41
+Name: count, dtype: int64
+
+wspd_source
+wspd_source
+isd_lite      8772
+metar           11
+dwd_mosmix       1
+Name: count, dtype: int64
+
+wpgt_source
+wpgt_source
+NaN    8784
+Name: count, dtype: int64
+
+pres_source
+pres_source
+isd_lite      8689
+metar           89
+dwd_mosmix       6
+Name: count, dtype: int64
+
+cldc_source
+cldc_source
+isd_lite      4938
+dwd_mosmix    3846
+Name: count, dtype: int64
+
+coco
+coco
+2.0     2916
+3.0     2535
+4.0     1742
+7.0      578
+1.0      309
+8.0      291
+5.0      160
+9.0      152
+14.0      59
+25.0      10
+15.0       8
+12.0       7
+NaN        6
+16.0       5
+13.0       4
+10.0       2
+Name: count, dtype: int64
+</pre></section><section class="nb-code"><span class="cell-label">In [75]</span><pre><code>for col in [
+    &quot;Parameter Name&quot;,
+    &quot;Units of Measure&quot;,
+    &quot;Qualifier&quot;,
+    &quot;Method Type&quot;,
+    &quot;Method Code&quot;,
+    &quot;Method Name&quot;,
+    &quot;State Name&quot;,
+    &quot;County Name&quot;,
+    &quot;Datum&quot;
+]:
+    print(f&quot;\n--- {col} ---&quot;)
+    print(air_df[col].value_counts(dropna=False).head(20))</code></pre><pre class="output">
+--- Parameter Name ---
+Parameter Name
+PM2.5 - Local Conditions    8139551
+Name: count, dtype: int64
+
+--- Units of Measure ---
+Units of Measure
+Micrograms/cubic meter (LC)    8139551
+Name: count, dtype: int64
+
+--- Qualifier ---
+Qualifier
+NaN    7487648
+2       147307
+IT       80675
+QX       72643
+IF       54303
+1        49889
+6        44602
+SX       43913
+6.0      39055
+IM       22568
+1V       17893
+J        16743
+IE        8453
+3         6490
+IJ        5273
+IH        5235
+MD        4586
+RF        4223
+IA        3997
+2.0       3871
+Name: count, dtype: int64
+
+--- Method Type ---
+Method Type
+FEM    8139551
+Name: count, dtype: int64
+
+--- Method Code ---
+Method Code
+636    2488972
+170    1746149
+638    1637575
+209    1469204
+184     228745
+182      98563
+581      91543
+183      88558
+236      69299
+736      67915
+195      65462
+238      44547
+738      34381
+181       8638
+Name: count, dtype: int64
+
+--- Method Name ---
+Method Name
+Teledyne T640 at 5.0 LPM w/Network Data Alignment enabled - Broadband spectroscopy       2488972
+Met One BAM-1020 Mass Monitor w/VSCC - Beta Attenuation                                  1746149
+Teledyne T640X at 16.67 LPM w/Network Data Alignment enabled - Broadband spectroscopy    1637575
+Met One BAM-1022 Mass Monitor w/ VSCC or TE-PM2.5C - Beta Attenuation                    1469204
+Thermo Scientific Model 5030 SHARP w/VSCC - Beta Attenuation                              228745
+Thermo Scientific TEOM 1405-DF Dichotomous FDMS - FDMS Gravimetric                         98563
+Thermo Scientific 1405-F FDMS w/VSCC - FDMS Gravimetric                                    91543
+Thermo Scientific 5014i or FH62C14-DHS w/VSCC - Beta Attenuation                           88558
+Teledyne T640 at 5.0 LPM - Broadband spectroscopy                                          69299
+Teledyne T640 at 5.0 LPM (Corrected) - Broadband spectroscopy                              67915
+GRIMM EDM Model 180 with naphion dryer - Laser Light Scattering                            65462
+Teledyne T640X at 16.67 LPM - Broadband spectroscopy                                       44547
+Teledyne T640X at 16.67 LPM (Corrected) - Broadband spectroscopy                           34381
+Thermo Scientific TEOM 1400 FDMS or 1405 8500C FDMS w/VSCC - FDMS Gravimetric               8638
+Name: count, dtype: int64
+
+--- State Name ---
+State Name
+California        1016518
+Pennsylvania       465466
+Texas              441848
+Ohio               324363
+Florida            260456
+Indiana            238984
+Michigan           234639
+Utah               232915
+Illinois           223128
+Minnesota          203095
+North Carolina     202771
+Colorado           192188
+Washington         185623
+Nevada             181485
+Tennessee          180847
+Georgia            176844
+Montana            166979
+Massachusetts      163263
+Wisconsin          161062
+New Jersey         157288
+Name: count, dtype: int64
+
+--- County Name ---
+County Name
+Clark             156505
+Jefferson         134478
+San Diego         118516
+Washington         98118
+Salt Lake          95689
+Hawaii             93138
+Wayne              83561
+Maricopa           77453
+Harris             75827
+Hamilton           68434
+Philadelphia       59638
+Lake               59357
+Montgomery         59108
+St. Louis City     58783
+Kent               55051
+Jackson            54709
+Cook               54525
+Allegheny          53245
+Cuyahoga           52229
+Ventura            51871
+Name: count, dtype: int64
+
+--- Datum ---
+Datum
+WGS84    5926053
+NAD83    2213498
+Name: count, dtype: int64
+</pre></section><section class="nb-code"><span class="cell-label">In [76]</span><pre><code>for col in [
+    &quot;State Code&quot;,
+    &quot;County Code&quot;,
+    &quot;Site Num&quot;,
+    &quot;Parameter Code&quot;,
+    &quot;POC&quot;
+]:
+    print(f&quot;\n--- {col} ---&quot;)
+    print(&quot;Unique:&quot;, air_df[col].nunique(dropna=False))
+    print(air_df[col].value_counts(dropna=False).head(10))</code></pre><pre class="output">
+--- State Code ---
+Unique: 53
+State Code
+6     1016518
+42     465466
+48     441848
+39     324363
+12     260456
+18     238984
+26     234639
+49     232915
+17     223128
+27     203095
+Name: count, dtype: int64
+
+--- County Code ---
+Unique: 126
+County Code
+3     408918
+1     384346
+13    283821
+35    249795
+31    225432
+21    185023
+19    184756
+73    178931
+29    160383
+37    158802
+Name: count, dtype: int64
+
+--- Site Num ---
+Unique: 266
+Site Num
+2     424475
+4     348179
+7     331480
+3     321591
+5     320757
+1     272749
+8     223389
+10    194079
+6     174100
+9     171132
+Name: count, dtype: int64
+
+--- Parameter Code ---
+Unique: 1
+Parameter Code
+88101    8139551
+Name: count, dtype: int64
+
+--- POC ---
+Unique: 12
+POC
+3     5022900
+1     1209893
+4      639911
+2      396352
+7      292015
+5      261838
+6      111069
+9       69399
+23      61279
+21      34581
+Name: count, dtype: int64
+</pre></section><section class="nb-markdown" id="cell-21"><h2>Task 2</h2></section><section class="nb-code"><span class="cell-label">In [53]</span><pre><code>from pathlib import Path
+
+for sub in [&quot;taxi_trips&quot;, &quot;weather&quot;, &quot;air_quality&quot;, &quot;taxi_zones&quot;]:
+    files = sorted(Path(&quot;data/raw&quot;, sub).glob(&quot;*&quot;))
+    total = sum(f.stat().st_size for f in files)
+    print(f&quot;{sub:15s} {total/1e6:8.1f} MB  ({len(files)} file(s))&quot;)
+    for f in files:
+        print(f&quot;    {f.name:45s} {f.stat().st_size/1e6:8.2f} MB&quot;)</code></pre><pre class="output">taxi_trips         160.4 MB  (4 file(s))
+    .gitkeep                                          0.00 MB
+    yellow_tripdata_2024-01.parquet                  49.96 MB
+    yellow_tripdata_2024-02.parquet                  50.35 MB
+    yellow_tripdata_2024-03.parquet                  60.08 MB
+weather              1.1 MB  (2 file(s))
+    .gitkeep                                          0.00 MB
+    weather.csv                                       1.07 MB
+air_quality       2365.7 MB  (2 file(s))
+    .gitkeep                                          0.00 MB
+    hourly_88101_2024.csv                          2365.68 MB
+taxi_zones           0.0 MB  (2 file(s))
+    .gitkeep                                          0.00 MB
+    taxi_zone_lookup.csv                              0.01 MB
+</pre></section><section class="nb-markdown" id="cell-23"><h2>Task 5</h2></section><section class="nb-code"><span class="cell-label">In [3]</span><pre><code>pwd</code></pre><pre class="output">&#x27;f:\\Sem 3A\\Data-intensive Computing\\urban-data-platform\\notebooks&#x27;</pre></section><section class="nb-code"><span class="cell-label">In [7]</span><pre><code>from src.common.spark_session import get_spark
+
+spark = get_spark()
+df = spark.read.format(&quot;delta&quot;).load(&quot;data/silver/air_quality&quot;)
+df.select(&quot;state_code&quot;, &quot;county_code&quot;, &quot;site_num&quot;, &quot;state_name&quot;, &quot;county_name&quot;, &quot;latitude&quot;, &quot;longitude&quot;) \
+  .distinct() \
+  .filter(&quot;state_name = &#x27;New York&#x27;&quot;) \
+  .show(20, truncate=False)
+spark.stop()</code></pre><pre class="output">+----------+-----------+--------+----------+-----------+---------+----------+
+|state_code|county_code|site_num|state_name|county_name|latitude |longitude |
++----------+-----------+--------+----------+-----------+---------+----------+
+|36        |31         |3       |New York  |Essex      |44.39308 |-73.8589  |
+|36        |47         |118     |New York  |Kings      |40.69454 |-73.92769 |
+|36        |55         |15      |New York  |Monroe     |43.145013|-77.55728 |
+|36        |55         |1007    |New York  |Monroe     |43.14618 |-77.54817 |
+|36        |81         |125     |New York  |Queens     |40.739264|-73.817694|
+|36        |29         |5       |New York  |Erie       |42.876907|-78.809526|
+|36        |47         |52      |New York  |Kings      |40.64182 |-74.01871 |
+|36        |1          |5       |New York  |Albany     |42.64225 |-73.75464 |
+|36        |5          |112     |New York  |Bronx      |40.81551 |-73.88553 |
+|36        |81         |124     |New York  |Queens     |40.73614 |-73.82153 |
+|36        |101        |3       |New York  |Steuben    |42.09142 |-77.20978 |
+|36        |5          |110     |New York  |Bronx      |40.816   |-73.902   |
+|36        |67         |1015    |New York  |Onondaga   |43.05235 |-76.05921 |
++----------+-----------+--------+----------+-----------+---------+----------+
+
+</pre></section><section class="nb-code"><span class="cell-label">In [9]</span><pre><code>from src.common.spark_session import get_spark
+spark = get_spark()
+df = spark.read.format(&quot;delta&quot;).load(&quot;data/silver/air_quality&quot;)
+df = df.filter(&quot;state_code=36 AND county_code=81 AND site_num=124&quot;)
+df.groupBy(&quot;date_local&quot;).count().filter(&quot;count &gt; 1&quot;).show(5)
+print(&quot;total rows for this site:&quot;, df.count())
+spark.stop()</code></pre><pre class="output">+-------------------+-----+
+|         date_local|count|
++-------------------+-----+
+|2024-06-04 00:00:00|   24|
+|2024-06-11 00:00:00|   24|
+|2024-06-13 00:00:00|   24|
+|2024-05-21 00:00:00|   24|
+|2024-05-24 00:00:00|   24|
++-------------------+-----+
+only showing top 5 rows
+
+total rows for this site: 8702
+</pre></section><section class="nb-code"><span class="cell-label">In [12]</span><pre><code>from src.common.spark_session import get_spark
+spark = get_spark()
+df = spark.read.format(&quot;delta&quot;).load(&quot;data/gold/integrated_taxi_trips&quot;)
+print(&quot;gold rows:&quot;, df.count())
+print(&quot;trip rows:&quot;, df.select(&quot;pickup_datetime&quot;,&quot;pickup_location_id&quot;,&quot;dropoff_location_id&quot;,&quot;total_amount&quot;).distinct().count())
+spark.stop()</code></pre><pre class="output">gold rows: 8484478
+trip rows: 8480696
+</pre></section><section class="nb-code"><span class="cell-label">In [13]</span><pre><code>from src.common.spark_session import get_spark
+from pyspark.sql.functions import col, lpad, concat, lit, to_timestamp
+
+spark = get_spark()
+df = spark.read.format(&quot;delta&quot;).load(&quot;data/silver/weather&quot;)
+df = df.withColumn(
+    &quot;weather_ts&quot;,
+    to_timestamp(
+        concat(
+            col(&quot;year&quot;).cast(&quot;string&quot;), lit(&quot;-&quot;),
+            lpad(col(&quot;month&quot;).cast(&quot;string&quot;), 2, &quot;0&quot;), lit(&quot;-&quot;),
+            lpad(col(&quot;day&quot;).cast(&quot;string&quot;), 2, &quot;0&quot;), lit(&quot; &quot;),
+            lpad(col(&quot;hour&quot;).cast(&quot;string&quot;), 2, &quot;0&quot;), lit(&quot;:00:00&quot;)
+        ),
+        &quot;yyyy-MM-dd HH:mm:ss&quot;
+    )
+)
+df.groupBy(&quot;weather_ts&quot;).count().filter(&quot;count &gt; 1&quot;).show(5)
+spark.stop()</code></pre><pre class="output">+-------------------+-----+
+|         weather_ts|count|
++-------------------+-----+
+|2024-03-31 03:00:00|    2|
++-------------------+-----+
+
+</pre></section><section class="nb-code"><span class="cell-label">In [ ]</span><pre><code></code></pre></section></div></main><footer class="site-footer"><div><span class="kicker">KEEP THE CONVERSATION GOING</span><h2>Interesting questions start with a conversation.</h2><a class="contact" href="mailto:saugatme@gmail.com">saugatme@gmail.com ↗</a></div><div class="footer-links"><a href="https://github.com/saugatme">GitHub ↗</a><a href="https://www.linkedin.com/in/saugat-bhattarai/">LinkedIn ↗</a><a href="../assets/Bhattarai_Saugat_CV.pdf">Curriculum vitae ↗</a><span>Stockholm, Sweden</span></div><p class="colophon">Saugat Bhattarai · Biomedical engineering / machine learning / data systems</p></footer></body></html>

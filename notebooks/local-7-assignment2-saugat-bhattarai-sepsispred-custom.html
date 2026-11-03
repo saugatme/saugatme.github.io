@@ -1,0 +1,665 @@
+<!doctype html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"><meta name="referrer" content="strict-origin-when-cross-origin"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Saugat Bhattarai — biomedical engineer, KTH Data-driven Health student. Selected work in medical imaging, machine learning and data engineering."><title>assignment2_saugat_bhattarai_sepsispred_custom — Saugat Bhattarai</title><link rel="stylesheet" href="../style.css"><script src="../theme.js"></script></head><body><a class="skip" href="#content">Skip to content</a><header class="site-header"><a class="wordmark" href="../index.html">saugat<span>.bhattarai</span><i> / </i></a><nav aria-label="Main"><a href="../index.html#work">Work</a><a href="../index.html#background">Background</a><a href="../index.html#about">About</a></nav><button class="theme-toggle" aria-label="Switch color theme" title="Switch light and dark theme">◐ <span>Theme</span></button></header><main id="content"><a class="back" href="../index.html#work">← Project library</a><div class="page-heading"><span class="kicker">RESEARCH NOTEBOOK</span><h1>assignment2_saugat_bhattarai_sepsispred_custom</h1><p>Code, explanations and saved outputs. This is a static reading view; cells are not executed here.</p><a class="button secondary" download href="local-7-assignment2-saugat-bhattarai-sepsispred-custom.ipynb">Download notebook ↓</a></div><details class="contents"><summary>Notebook contents</summary><a href="#cell-9">Preprocessing</a><a href="#cell-14">Input Features</a><a href="#cell-23">Validation on AUROC not loss because:</a></details><div class="notebook"><section class="nb-markdown" id="cell-1"><p><a href="https://colab.research.google.com/github/saugatme/SepsisPrediction/blob/main/assignment2_saugat_bhattarai_sepsispred_custom.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a></p></section><section class="nb-code"><span class="cell-label">In [1]</span><pre><code>import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import pandas as pd
+import numpy as np
+from torch.utils.data import DataLoader, TensorDataset
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import (
+    roc_auc_score, average_precision_score,
+    precision_score, recall_score, f1_score
+)
+import warnings
+warnings.filterwarnings(&#x27;ignore&#x27;)</code></pre></section><section class="nb-code"><span class="cell-label">In [2]</span><pre><code>torch.manual_seed(42)
+np.random.seed(42)</code></pre></section><section class="nb-code"><span class="cell-label">In [3]</span><pre><code>DEVICE = torch.device(&#x27;cuda&#x27; if torch.cuda.is_available() else &#x27;cpu&#x27;)
+print(f&#x27;Device: {DEVICE}&#x27;)</code></pre><pre class="output">Device: cuda
+</pre></section><section class="nb-code"><span class="cell-label">In [4]</span><pre><code>from google.colab import drive
+drive.mount(&#x27;/content/drive&#x27;)</code></pre><pre class="output">Mounted at /content/drive
+</pre></section><section class="nb-code"><span class="cell-label">In [5]</span><pre><code>#  Original 43 clinical features
+FEATURE_COLUMNS = [
+    &#x27;respiratory_minute_volume&#x27;, &#x27;heart_rate&#x27;, &#x27;leukocytes&#x27;, &#x27;temperature&#x27;,
+    &#x27;partial_co2&#x27;, &#x27;respiratory_rate&#x27;, &#x27;arterial_ph&#x27;, &#x27;bilirubin&#x27;,
+    &#x27;blood_urea_nitrogen&#x27;, &#x27;creatinine&#x27;, &#x27;diastolic_bp&#x27;, &#x27;fraction_of_inspired_o2&#x27;,
+    &#x27;mean_bp&#x27;, &#x27;partial_pressure_art._o2&#x27;, &#x27;systolic_bp&#x27;, &#x27;thrombocytes&#x27;,
+    &#x27;horowitz_index&#x27;, &#x27;bun/creatinine_ratio&#x27;, &#x27;delta-temperature&#x27;,
+    &#x27;lactate&#x27;, &#x27;bicarbonate&#x27;, &#x27;c-reactive_protein&#x27;, &#x27;hemoglobin&#x27;,
+    &#x27;heart_time_volume&#x27;, &#x27;lymphocytes&#x27;, &#x27;sodium&#x27;, &#x27;pancreatic_lipase&#x27;,
+    &#x27;procalcitonin&#x27;, &#x27;quick_score&#x27;, &#x27;oxygen_saturation&#x27;, &#x27;blood_glucose&#x27;,
+    &#x27;base_excess&#x27;, &#x27;chloride&#x27;, &#x27;calcium&#x27;, &#x27;potassium&#x27;,
+    &#x27;mixed_venous_oxygen_saturation&#x27;, &#x27;urine_output&#x27;, &#x27;net balance&#x27;,
+    &#x27;alanine_transaminase&#x27;, &#x27;aspartate_transaminase&#x27;, &#x27;stroke_volume&#x27;,
+    &#x27;svri&#x27;, &#x27;age&#x27;
+]</code></pre></section><section class="nb-markdown" id="cell-7"><p>Fastest-changing and most clinically informative markers before sepsis onset:
+1. Lactate rises as cells starve of oxygen.
+2. MAP drops as the cardiovascular system fails.
+3. pH falls as organs release acid.
+4. Procalcitonin spikes specifically with bacterial infection.</p></section><section class="nb-code"><span class="cell-label">In [6]</span><pre><code>TREND_MARKERS = [&#x27;lactate&#x27;, &#x27;mean_bp&#x27;, &#x27;arterial_ph&#x27;, &#x27;procalcitonin&#x27;]
+
+#  4 markers with 2 time windows
+TREND_FEATURES = [f&#x27;{col}_delta_{h}hr&#x27;for col in TREND_MARKERS for h in [1, 2]]
+ALL_FEATURES = FEATURE_COLUMNS + TREND_FEATURES</code></pre></section><section class="nb-markdown" id="cell-9"><h3>Preprocessing</h3></section><section class="nb-code"><span class="cell-label">In [7]</span><pre><code>def add_trend_features(df):
+    df = df.copy()
+    for col in TREND_MARKERS:
+        df[f&#x27;{col}_delta_1hr&#x27;] = (df.groupby(&#x27;id&#x27;)[col].transform(lambda x: x.diff(2)))
+        df[f&#x27;{col}_delta_2hr&#x27;] = (df.groupby(&#x27;id&#x27;)[col].transform(lambda x: x.diff(4)))
+    return df</code></pre></section><section class="nb-markdown" id="cell-11"><p>Three steps:
+1. Forward-fill within each patient : Last known value is the best estimate until a new measurement is taken.
+2. Median impute remaining gaps: Some patients never had certain labs measured at all.
+3. Add trend features: Gives the model temporal awareness without a sequence model.</p></section><section class="nb-code"><span class="cell-label">In [8]</span><pre><code>def preprocess_data(df):
+
+    df = df.copy()
+
+    # Forward fill per patient
+    if &#x27;id&#x27; in df.columns:
+        df[FEATURE_COLUMNS] = df.groupby(&#x27;id&#x27;)[FEATURE_COLUMNS].ffill()
+
+    # Median impute
+    imputer = SimpleImputer(strategy=&#x27;median&#x27;)
+    df[FEATURE_COLUMNS] = imputer.fit_transform(df[FEATURE_COLUMNS])
+
+    # Trend features
+    df = add_trend_features(df)
+    for col in TREND_FEATURES:
+        df[col] = df[col].fillna(0)
+
+    return df</code></pre></section><section class="nb-code"><span class="cell-label">In [10]</span><pre><code>partitions = {}
+for name in [&#x27;A&#x27;, &#x27;B&#x27;, &#x27;C&#x27;, &#x27;D&#x27;]:
+    partitions[name] = pd.read_csv(
+        # f&quot;D:/Data-Driven Health/Sem 2A/Assignment2_Sepsis/raw_data/sepsisexp_timeseries_partition-{name}.tsv&quot;, sep=&#x27;\t&#x27;
+        # Colab:
+        f&#x27;/content/drive/MyDrive/ML Dataset/raw_data/sepsisexp_timeseries_partition-{name}.tsv&#x27;, sep=&#x27;\t&#x27;)
+    partitions[name] = preprocess_data(partitions[name])</code></pre></section><section class="nb-markdown" id="cell-14"><p>For each timestep <code>i</code> in a patient's timeline:</p>
+<h4>Input Features</h4>
+<ul>
+<li><code>X_i</code>: 51 features at timestep <code>i</code>  </li>
+<li>Includes the current patient snapshot and temporal trend features</li>
+</ul>
+<h4>Targets</h4>
+<ul>
+<li><code>y_severity</code> (Primary Target)</li>
+<li>Continuous or ordinal severity level at the forecast horizon (N hours ahead).  </li>
+<li>
+<p>Represents the predicted position on the clinical severity scale after <code>N</code> hours.</p>
+</li>
+<li>
+<p><code>y_binary</code> (Evaluation Target)</p>
+</li>
+<li>Binary indicator derived from <code>y_severity</code>:</li>
+</ul>
+<p>```text
+  y_binary = 1  if severity &gt; 0 at horizon
+  y_binary = 0  otherwise</p></section><section class="nb-code"><span class="cell-label">In [11]</span><pre><code>def create_labels(df, horizon_hours):
+
+    horizon_steps = int(horizon_hours * 2)  # 2hr → 4 steps, 4hr → 8 steps, 6hr → 12 steps
+    X, y_severity, y_binary = [], [], []
+
+    for patient_id in df[&#x27;id&#x27;].unique():
+        pat = (df[df[&#x27;id&#x27;] == patient_id].sort_values(&#x27;timestep&#x27;).reset_index(drop=True))
+        n = len(pat)
+
+        for i in range(n - horizon_steps):
+            # Input: current features
+            features = pat.iloc[i][ALL_FEATURES].values
+
+            # Target: severity at forecast point
+            sev = pat.iloc[i + horizon_steps][&#x27;severity&#x27;]
+
+            X.append(features)
+            y_severity.append(sev)
+            y_binary.append(int(sev &gt; 0))
+
+    return (
+        np.array(X,          dtype=np.float32),
+        np.array(y_severity, dtype=np.float32),
+        np.array(y_binary,   dtype=np.float32),)</code></pre></section><section class="nb-markdown" id="cell-16"><p>We employ a 3-layer MLP for sepsis severity prediction.</p>
+<p>Reason for MLP:
+1. The temporal signal is already captured in our trend features
+2. An MLP on 51 features is simpler, faster to train, and easier to explain with comparable accuracy for tabular clinical data.</p>
+<p>Dual Output:
+1. Severity head : predicts severity class (0-4) at forecast horizon
+2. Binary head   : predicts sepsis yes/no (severity &gt; 0)</p></section><section class="nb-markdown" id="cell-17"><p>Xavier uniform initialisation:  Xavier sets initial weights based on the size of each layer so gradients stay in a healthy range throughout training.</p></section><section class="nb-code"><span class="cell-label">In [ ]</span><pre><code>class SepsisNet(nn.Module):
+    def __init__(self, input_size=51):
+        super().__init__()
+
+        self.fc1   = nn.Linear(input_size, 64)         # Layer 1: 51 → 64
+        self.bn1   = nn.BatchNorm1d(64)
+        self.drop1 = nn.Dropout(0.3)
+
+        self.fc2   = nn.Linear(64, 32)        # Layer 2: 64 → 32
+        self.bn2   = nn.BatchNorm1d(32)
+        self.drop2 = nn.Dropout(0.3)
+
+        # Severity head: 32 → 5
+        self.severity_head = nn.Linear(32, 5)         # 5 outputs = one score per severity class (0, 1, 2, 3, 4)
+        self.binary_head = nn.Linear(32, 1)         # Binary head: 32 → 1 # Single probability: will severity &gt; 0
+        self._init_weights()         # Initialise all weights
+
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        # Pass through shared backbone
+        x = self.drop1(F.relu(self.bn1(self.fc1(x))))  
+        x = self.drop2(F.relu(self.bn2(self.fc2(x))))  
+
+        # Two separate outputs from the same representation
+        severity_logits = self.severity_head(x)
+        binary_prob     = torch.sigmoid(self.binary_head(x))
+
+        return severity_logits, binary_prob</code></pre></section><section class="nb-markdown" id="cell-19"><p>Compute class weights to handle imbalance: Class weights penalise the model more for getting rare classes wrong.</p></section><section class="nb-markdown" id="cell-20"><p>Two losses added together:</p>
+<ol>
+<li><code>CrossEntropyLoss</code> on severity (0–4): Standard loss for multi-class classification. It takes raw logits, applies softmax internally, measures how wrong the predicted class distribution is.</li>
+<li><code>BCELoss</code> on binary (0/1): Standard for binary classification. It measures how far the sigmoid probability is from the true label.</li>
+</ol>
+<p>Combined beacause: The binary loss acts as extra supervision i.e. it pushes the model to clearly separate sick vs healthy, which helps the severity task too.</p></section><section class="nb-code"><span class="cell-label">In [13]</span><pre><code>def get_class_weights(y_severity, n_classes=5):
+    counts = np.bincount(y_severity.astype(int), minlength=n_classes)
+    total  = len(y_severity)
+    weights = total / (n_classes * counts.clip(min=1))
+    return torch.FloatTensor(weights).to(DEVICE)
+
+
+def combined_loss(sev_logits, bin_prob, y_sev, y_bin, class_weights):
+    loss_severity = F.cross_entropy(sev_logits, y_sev.long(), weight=class_weights)
+    loss_binary = F.binary_cross_entropy(bin_prob.squeeze(), y_bin)
+    return loss_severity + 0.3 * loss_binary</code></pre></section><section class="nb-markdown" id="cell-22"><ul>
+<li><code>StandardScaler</code> ensures all 51 features are on equal footing.</li>
+<li>
+<p>batch_size=256:</p>
+<ul>
+<li>Larger batches = more stable gradient estimates.</li>
+<li>256 is a good balance between fast training and stable updates.</li>
+<li><code>shuffle=True</code> ensures the model doesn't learn the order of patients.</li>
+</ul>
+</li>
+<li>
+<p><code>Adam Optimizer</code>: Adapts learning rate per parameter automatically</p>
+<ul>
+<li>More reliable than plain SGD for tabular medical data.</li>
+<li><code>weight_decay=1e-4</code> is L2 regularisation ; Small penalty on large weights -&gt; reduces overfitting.</li>
+</ul>
+</li>
+</ul></section><section class="nb-markdown" id="cell-23"><h1>Validation on AUROC not loss because:</h1>
+<ul>
+<li>Loss can keep improving even when the model isn't getting better at the actual task.</li>
+<li>AUROC directly measures ranking quality which is what we care about clinically.</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [14]</span><pre><code>def train_model(train_data, val_data, horizon_hours):
+
+    #  Build arrays
+    X_tr, y_sev_tr, y_bin_tr = create_labels(train_data, horizon_hours)
+    X_va, y_sev_va, y_bin_va = create_labels(val_data, horizon_hours)
+
+    scaler = StandardScaler()
+    X_tr = scaler.fit_transform(X_tr)
+    X_va = scaler.transform(X_va)
+    class_weights = get_class_weights(y_sev_tr)     #  Class weights from training labels only
+
+    #  DataLoader
+    train_ds = TensorDataset(
+        torch.FloatTensor(X_tr),
+        torch.FloatTensor(y_sev_tr),
+        torch.FloatTensor(y_bin_tr)
+    )
+    train_loader = DataLoader(train_ds, batch_size=256, shuffle=True)
+
+    model = SepsisNet(input_size=X_tr.shape[1]).to(DEVICE)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
+
+    # Training loop
+    best_auroc      = 0.0
+    best_state      = None
+    patience_counter = 0
+    PATIENCE        = 15
+
+    for epoch in range(100):
+        model.train()
+        for batch_X, batch_sev, batch_bin in train_loader:
+            batch_X   = batch_X.to(DEVICE)
+            batch_sev = batch_sev.to(DEVICE)
+            batch_bin = batch_bin.to(DEVICE)
+
+            sev_logits, bin_prob = model(batch_X)
+            loss = combined_loss(sev_logits, bin_prob, batch_sev, batch_bin, class_weights)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        # Validate
+        model.eval()
+        with torch.no_grad():
+            X_va_t = torch.FloatTensor(X_va).to(DEVICE)
+            _, bin_prob_va = model(X_va_t)
+            probs_va = bin_prob_va.cpu().numpy().squeeze()
+
+        try:
+            val_auroc = roc_auc_score(y_bin_va, probs_va)
+        except Exception:
+            val_auroc = 0.5
+
+        if epoch % 10 == 0:
+            print(f&#x27;  Epoch {epoch:3d} | Val AUROC: {val_auroc:.4f}&#x27;)
+
+        #  Early stopping
+        if val_auroc &gt; best_auroc:
+            best_auroc   = val_auroc
+            best_state   = {k: v.clone() for k, v in model.state_dict().items()}
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter &gt;= PATIENCE:
+                print(f&#x27;  Early stopping at epoch {epoch} &#x27;
+                      f&#x27;(best AUROC: {best_auroc:.4f})&#x27;)
+                break
+
+    # Restore best weights before returning
+    model.load_state_dict(best_state)
+    return model, scaler</code></pre></section><section class="nb-markdown" id="cell-25"><ul>
+<li>Each fold trains on 3 partitions, tests on 1.</li>
+<li>Rotating all 4 gives us results across the full dataset, not just one train/test split.<ul>
+<li>Averaging across folds gives a reliable estimate of true model performance.</li>
+</ul>
+</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [15]</span><pre><code>def cross_validation(partitions, horizon_hours):
+    folds = [
+        {&#x27;train&#x27;: [&#x27;A&#x27;,&#x27;B&#x27;,&#x27;C&#x27;], &#x27;test&#x27;: &#x27;D&#x27;},
+        {&#x27;train&#x27;: [&#x27;A&#x27;,&#x27;B&#x27;,&#x27;D&#x27;], &#x27;test&#x27;: &#x27;C&#x27;},
+        {&#x27;train&#x27;: [&#x27;A&#x27;,&#x27;C&#x27;,&#x27;D&#x27;], &#x27;test&#x27;: &#x27;B&#x27;},
+        {&#x27;train&#x27;: [&#x27;B&#x27;,&#x27;C&#x27;,&#x27;D&#x27;], &#x27;test&#x27;: &#x27;A&#x27;},
+    ]
+
+    all_results = []
+    saved_models = []
+
+    for i, fold in enumerate(folds):
+        print(f&#x27;\nFold {i+1}/4 — test: partition {fold[&quot;test&quot;]}&#x27;)
+        print(&#x27;-&#x27; * 45)
+
+        train_data = pd.concat(
+            [partitions[p] for p in fold[&#x27;train&#x27;]],
+            ignore_index=True
+        )
+        test_data = partitions[fold[&#x27;test&#x27;]]
+
+        model, scaler = train_model(train_data, test_data, horizon_hours)
+        results       = evaluate_model(model, scaler, test_data, horizon_hours)
+
+        all_results.append(results)
+        saved_models.append((model, scaler))
+
+        torch.save(
+            model.state_dict(),
+            f&#x27;model_{horizon_hours}hr_fold{i+1}.pth&#x27;
+        )
+
+    metrics = [&#x27;auroc&#x27;, &#x27;auprc&#x27;, &#x27;precision&#x27;, &#x27;recall&#x27;, &#x27;f1&#x27;, &#x27;severity_mae&#x27;]
+    avg = {m: np.mean([r[m] for r in all_results]) for m in metrics}
+    std = {m: np.std( [r[m] for r in all_results]) for m in metrics}
+
+    print(f&#x27;\n{&quot;=&quot;*45}&#x27;)
+    print(f&#x27;CV Results — {horizon_hours}hr horizon&#x27;)
+    for m in metrics:
+        print(f&#x27;  {m:12s}: {avg[m]:.3f} ± {std[m]:.3f}&#x27;)
+    print(f&#x27;{&quot;=&quot;*45}&#x27;)
+
+    return avg, std, saved_models</code></pre></section><section class="nb-markdown" id="cell-27"><p>Two separate evaluations:
+1. Binary metrics (AUROC, AUPRC, Recall, F1) from binary head
+2. Severity MAE from severity head</p></section><section class="nb-markdown" id="cell-28"><ul>
+<li>MAE because Severity is ordinal (0,1,2,3,4).<ul>
+<li>Being off by 1 level is much better than being off by 3. MAE captures this; it rewards being close, not just exact.</li>
+</ul>
+</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [16]</span><pre><code>def evaluate_model(model, scaler, test_data, horizon_hours, threshold=0.5):
+    X_test, y_sev, y_bin = create_labels(test_data, horizon_hours)
+    X_test = scaler.transform(X_test)
+
+    model.eval()
+    with torch.no_grad():
+        X_t = torch.FloatTensor(X_test).to(DEVICE)
+        sev_logits, bin_prob = model(X_t)
+
+        # Binary predictions
+        probs = bin_prob.cpu().numpy().squeeze()
+        preds = (probs &gt; threshold).astype(int)
+
+        # Severity predictions
+        sev_preds = sev_logits.argmax(dim=1).cpu().numpy()
+
+    results = {
+        #  Binary metrics
+        &#x27;auroc&#x27;:     roc_auc_score(y_bin, probs),
+        &#x27;auprc&#x27;:     average_precision_score(y_bin, probs),
+        &#x27;precision&#x27;: precision_score(y_bin, preds, zero_division=0),
+        &#x27;recall&#x27;:    recall_score(y_bin, preds, zero_division=0),
+        &#x27;f1&#x27;:        f1_score(y_bin, preds, zero_division=0),
+
+        #  Severity metric
+        &#x27;severity_mae&#x27;: np.mean(np.abs(sev_preds - y_sev)),
+    }
+
+    print(f&#x27;  AUROC={results[&quot;auroc&quot;]:.3f} | &#x27;
+          f&#x27;AUPRC={results[&quot;auprc&quot;]:.3f} | &#x27;
+          f&#x27;Recall={results[&quot;recall&quot;]:.3f} | &#x27;
+          f&#x27;F1={results[&quot;f1&quot;]:.3f} | &#x27;
+          f&#x27;SevMAE={results[&quot;severity_mae&quot;]:.3f}&#x27;)
+
+    return results</code></pre></section><section class="nb-markdown" id="cell-30"><ul>
+<li>For each feature: shuffle it, measure AUROC drop.</li>
+<li>Importance = how much AUROC drops when that feature is destroyed.</li>
+</ul></section><section class="nb-markdown" id="cell-31"><p>Smallest set of features that retains 95% of baseline AUROC.</p>
+<ul>
+<li>
+<p>Why 95%: A small accuracy trade-off for a much simpler model is worth it clinically</p>
+<ul>
+<li>fewer features = faster measurement, lower cost, easier to deploy at bedside.</li>
+</ul>
+</li>
+<li>
+<p>Method: Add features one by one in importance order, stop when we hit the 95% retention target.</p>
+</li>
+</ul></section><section class="nb-code"><span class="cell-label">In [17]</span><pre><code>def permutation_importance(model, scaler, test_data, horizon_hours):
+    X_test, _, y_bin = create_labels(test_data, horizon_hours)
+    X_test_sc = scaler.transform(X_test)
+
+    # Baseline — normal predictions
+    model.eval()
+    with torch.no_grad():
+        _, bin_prob = model(torch.FloatTensor(X_test_sc).to(DEVICE))
+        base_probs  = bin_prob.cpu().numpy().squeeze()
+    baseline_auroc = roc_auc_score(y_bin, base_probs)
+
+    importances = []
+
+    for fi, feat_name in enumerate(ALL_FEATURES):
+        # Shuffle just this one feature column
+        X_shuffled = X_test_sc.copy()
+        np.random.shuffle(X_shuffled[:, fi])
+
+        with torch.no_grad():
+            _, bin_prob = model(torch.FloatTensor(X_shuffled).to(DEVICE))
+            shuffled_probs = bin_prob.cpu().numpy().squeeze()
+
+        shuffled_auroc = roc_auc_score(y_bin, shuffled_probs)
+        drop = baseline_auroc - shuffled_auroc  # positive = feature was useful
+
+        importances.append({
+            &#x27;feature&#x27;:    feat_name,
+            &#x27;importance&#x27;: drop
+        })
+
+    # Sort
+    importances.sort(key=lambda x: x[&#x27;importance&#x27;], reverse=True)
+
+    print(f&#x27;\nTop 15 features — {horizon_hours}hr horizon &#x27;
+          f&#x27;(baseline AUROC={baseline_auroc:.4f})&#x27;)
+    print(&#x27;-&#x27; * 28)
+    for i, item in enumerate(importances[:15], 1):
+        bar = &#x27;█&#x27; * max(0, int(item[&#x27;importance&#x27;] * 300))
+        print(f&#x27;{i:2d}. {item[&quot;feature&quot;]:35s} {item[&quot;importance&quot;]:+.4f}  {bar}&#x27;)
+
+    return importances
+
+
+def find_minimal_features(model, scaler, test_data, horizon_hours, importances, threshold=0.95):
+    X_test, _, y_bin = create_labels(test_data, horizon_hours)
+    X_test_sc = scaler.transform(X_test)
+
+    model.eval()
+    with torch.no_grad():
+        _, bin_prob = model(torch.FloatTensor(X_test_sc).to(DEVICE))
+        base_probs  = bin_prob.cpu().numpy().squeeze()
+    baseline_auroc = roc_auc_score(y_bin, base_probs)
+    target_auroc   = baseline_auroc * threshold
+
+    feat_index = {f: i for i, f in enumerate(ALL_FEATURES)}
+    ranked     = [item[&#x27;feature&#x27;] for item in importances]
+
+    for k in range(1, len(ranked) + 1):
+        # Zero out all features except top-k
+        X_reduced = np.zeros_like(X_test_sc)
+        for feat in ranked[:k]:
+            fi = feat_index[feat]
+            X_reduced[:, fi] = X_test_sc[:, fi]
+
+        with torch.no_grad():
+            _, bin_prob = model(torch.FloatTensor(X_reduced).to(DEVICE))
+            probs_k     = bin_prob.cpu().numpy().squeeze()
+        auroc_k = roc_auc_score(y_bin, probs_k)
+
+        if auroc_k &gt;= target_auroc:
+            print(f&#x27;\n{horizon_hours}hr minimal set: {k} features &#x27;
+                  f&#x27;(AUROC={auroc_k:.4f}, target={target_auroc:.4f})&#x27;)
+            print(f&#x27;Features: {ranked[:k]}&#x27;)
+            return ranked[:k]
+
+    return ranked</code></pre></section><section class="nb-code"><span class="cell-label">In [18]</span><pre><code>all_results = {}
+all_models  = {}
+
+for h in [2, 4, 6]:
+    print(f&#x27;\n{&quot;#&quot;*50}&#x27;)
+    print(f&#x27;  {h}-hour prediction&#x27;)
+    print(f&#x27;{&quot;#&quot;*50}&#x27;)
+
+    avg, std, saved_models = cross_validation(partitions, horizon_hours=h)
+    all_results[h] = (avg, std)
+    all_models[h]  = saved_models
+
+    # Fold 4 = index 3 = trained on B,C,D, tested on A
+    model_f4, scaler_f4 = all_models[h][3]
+    importances = permutation_importance(model_f4, scaler_f4, partitions[&#x27;A&#x27;], h)
+    minimal = find_minimal_features(model_f4, scaler_f4, partitions[&#x27;A&#x27;], h, importances)
+
+# Print final summary
+print(&#x27;\nFINAL SUMMARY&#x27;)
+print(&#x27;=&#x27; * 55)
+print(f&#x27;{&quot;Horizon&quot;:&lt;10} {&quot;AUROC&quot;:&lt;14} {&quot;Recall&quot;:&lt;14} {&quot;SevMAE&quot;}&#x27;)
+print(&#x27;-&#x27; * 55)
+for h in [2, 4, 6]:
+    avg, std = all_results[h]
+    print(f&#x27;{h}hr        &#x27;
+          f&#x27;{avg[&quot;auroc&quot;]:.3f}±{std[&quot;auroc&quot;]:.3f}   &#x27;
+          f&#x27;{avg[&quot;recall&quot;]:.3f}±{std[&quot;recall&quot;]:.3f}   &#x27;
+          f&#x27;{avg[&quot;severity_mae&quot;]:.3f}±{std[&quot;severity_mae&quot;]:.3f}&#x27;)</code></pre><pre class="output">
+##################################################
+  2-hour prediction
+##################################################
+
+Fold 1/4 — test: partition D
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7988
+  Epoch  10 | Val AUROC: 0.7890
+  Early stopping at epoch 15 (best AUROC: 0.7988)
+  AUROC=0.799 | AUPRC=0.721 | Recall=0.701 | F1=0.698 | SevMAE=0.909
+
+Fold 2/4 — test: partition C
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7843
+  Epoch  10 | Val AUROC: 0.7766
+  Early stopping at epoch 16 (best AUROC: 0.7863)
+  AUROC=0.786 | AUPRC=0.775 | Recall=0.665 | F1=0.706 | SevMAE=0.971
+
+Fold 3/4 — test: partition B
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7833
+  Epoch  10 | Val AUROC: 0.7742
+  Early stopping at epoch 16 (best AUROC: 0.7900)
+  AUROC=0.790 | AUPRC=0.788 | Recall=0.694 | F1=0.717 | SevMAE=0.973
+
+Fold 4/4 — test: partition A
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7929
+  Epoch  10 | Val AUROC: 0.7908
+  Early stopping at epoch 17 (best AUROC: 0.8068)
+  AUROC=0.807 | AUPRC=0.795 | Recall=0.745 | F1=0.745 | SevMAE=0.864
+
+=============================================
+CV Results — 2hr horizon
+  auroc       : 0.795 ± 0.008
+  auprc       : 0.770 ± 0.029
+  precision   : 0.733 ± 0.023
+  recall      : 0.701 ± 0.029
+  f1          : 0.716 ± 0.018
+  severity_mae: 0.929 ± 0.046
+=============================================
+
+Top 15 features — 2hr horizon (baseline AUROC=0.8068)
+----------------------------
+ 1. heart_time_volume                   +0.0447  █████████████
+ 2. c-reactive_protein                  +0.0418  ████████████
+ 3. bilirubin                           +0.0236  ███████
+ 4. leukocytes                          +0.0141  ████
+ 5. hemoglobin                          +0.0099  ██
+ 6. procalcitonin                       +0.0099  ██
+ 7. quick_score                         +0.0091  ██
+ 8. chloride                            +0.0079  ██
+ 9. stroke_volume                       +0.0073  ██
+10. respiratory_minute_volume           +0.0062  █
+11. base_excess                         +0.0060  █
+12. blood_urea_nitrogen                 +0.0059  █
+13. fraction_of_inspired_o2             +0.0056  █
+14. thrombocytes                        +0.0054  █
+15. calcium                             +0.0050  █
+
+2hr minimal set: 7 features (AUROC=0.7726, target=0.7665)
+Features: [&#x27;heart_time_volume&#x27;, &#x27;c-reactive_protein&#x27;, &#x27;bilirubin&#x27;, &#x27;leukocytes&#x27;, &#x27;hemoglobin&#x27;, &#x27;procalcitonin&#x27;, &#x27;quick_score&#x27;]
+
+##################################################
+  4-hour prediction
+##################################################
+
+Fold 1/4 — test: partition D
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7874
+  Epoch  10 | Val AUROC: 0.7741
+  Early stopping at epoch 16 (best AUROC: 0.7914)
+  AUROC=0.791 | AUPRC=0.731 | Recall=0.677 | F1=0.679 | SevMAE=0.951
+
+Fold 2/4 — test: partition C
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7843
+  Epoch  10 | Val AUROC: 0.7846
+  Early stopping at epoch 19 (best AUROC: 0.7889)
+  AUROC=0.789 | AUPRC=0.789 | Recall=0.698 | F1=0.724 | SevMAE=0.998
+
+Fold 3/4 — test: partition B
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7732
+  Epoch  10 | Val AUROC: 0.7592
+  Early stopping at epoch 18 (best AUROC: 0.7742)
+  AUROC=0.774 | AUPRC=0.775 | Recall=0.614 | F1=0.668 | SevMAE=0.971
+
+Fold 4/4 — test: partition A
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.8216
+  Epoch  10 | Val AUROC: 0.8048
+  Early stopping at epoch 15 (best AUROC: 0.8216)
+  AUROC=0.822 | AUPRC=0.823 | Recall=0.794 | F1=0.761 | SevMAE=0.878
+
+=============================================
+CV Results — 4hr horizon
+  auroc       : 0.794 ± 0.017
+  auprc       : 0.779 ± 0.033
+  precision   : 0.725 ± 0.026
+  recall      : 0.695 ± 0.065
+  f1          : 0.708 ± 0.037
+  severity_mae: 0.949 ± 0.044
+=============================================
+
+Top 15 features — 4hr horizon (baseline AUROC=0.8216)
+----------------------------
+ 1. c-reactive_protein                  +0.0448  █████████████
+ 2. heart_time_volume                   +0.0341  ██████████
+ 3. bilirubin                           +0.0218  ██████
+ 4. hemoglobin                          +0.0125  ███
+ 5. stroke_volume                       +0.0103  ███
+ 6. fraction_of_inspired_o2             +0.0094  ██
+ 7. quick_score                         +0.0092  ██
+ 8. lactate                             +0.0086  ██
+ 9. leukocytes                          +0.0084  ██
+10. procalcitonin                       +0.0075  ██
+11. calcium                             +0.0059  █
+12. creatinine                          +0.0058  █
+13. delta-temperature                   +0.0049  █
+14. respiratory_minute_volume           +0.0042  █
+15. mixed_venous_oxygen_saturation      +0.0039  █
+
+4hr minimal set: 4 features (AUROC=0.7919, target=0.7805)
+Features: [&#x27;c-reactive_protein&#x27;, &#x27;heart_time_volume&#x27;, &#x27;bilirubin&#x27;, &#x27;hemoglobin&#x27;]
+
+##################################################
+  6-hour prediction
+##################################################
+
+Fold 1/4 — test: partition D
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7894
+  Epoch  10 | Val AUROC: 0.7711
+  Early stopping at epoch 15 (best AUROC: 0.7894)
+  AUROC=0.789 | AUPRC=0.718 | Recall=0.685 | F1=0.682 | SevMAE=0.963
+
+Fold 2/4 — test: partition C
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7724
+  Epoch  10 | Val AUROC: 0.7617
+  Early stopping at epoch 15 (best AUROC: 0.7724)
+  AUROC=0.772 | AUPRC=0.765 | Recall=0.712 | F1=0.731 | SevMAE=0.986
+
+Fold 3/4 — test: partition B
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.7740
+  Epoch  10 | Val AUROC: 0.7747
+  Epoch  20 | Val AUROC: 0.7723
+  Early stopping at epoch 29 (best AUROC: 0.7793)
+  AUROC=0.779 | AUPRC=0.787 | Recall=0.623 | F1=0.685 | SevMAE=0.963
+
+Fold 4/4 — test: partition A
+---------------------------------------------
+  Epoch   0 | Val AUROC: 0.8121
+  Epoch  10 | Val AUROC: 0.8231
+  Epoch  20 | Val AUROC: 0.8189
+  Early stopping at epoch 25 (best AUROC: 0.8231)
+  AUROC=0.823 | AUPRC=0.826 | Recall=0.757 | F1=0.762 | SevMAE=0.912
+
+=============================================
+CV Results — 6hr horizon
+  auroc       : 0.791 ± 0.019
+  auprc       : 0.774 ± 0.039
+  precision   : 0.740 ± 0.035
+  recall      : 0.694 ± 0.049
+  f1          : 0.715 ± 0.033
+  severity_mae: 0.956 ± 0.027
+=============================================
+
+Top 15 features — 6hr horizon (baseline AUROC=0.8231)
+----------------------------
+ 1. c-reactive_protein                  +0.0578  █████████████████
+ 2. heart_time_volume                   +0.0464  █████████████
+ 3. bilirubin                           +0.0350  ██████████
+ 4. fraction_of_inspired_o2             +0.0194  █████
+ 5. leukocytes                          +0.0160  ████
+ 6. procalcitonin                       +0.0148  ████
+ 7. horowitz_index                      +0.0142  ████
+ 8. stroke_volume                       +0.0139  ████
+ 9. age                                 +0.0132  ███
+10. hemoglobin                          +0.0127  ███
+11. thrombocytes                        +0.0123  ███
+12. creatinine                          +0.0113  ███
+13. mixed_venous_oxygen_saturation      +0.0103  ███
+14. alanine_transaminase                +0.0101  ███
+15. bun/creatinine_ratio                +0.0100  ███
+
+6hr minimal set: 14 features (AUROC=0.7894, target=0.7820)
+Features: [&#x27;c-reactive_protein&#x27;, &#x27;heart_time_volume&#x27;, &#x27;bilirubin&#x27;, &#x27;fraction_of_inspired_o2&#x27;, &#x27;leukocytes&#x27;, &#x27;procalcitonin&#x27;, &#x27;horowitz_index&#x27;, &#x27;stroke_volume&#x27;, &#x27;age&#x27;, &#x27;hemoglobin&#x27;, &#x27;thrombocytes&#x27;, &#x27;creatinine&#x27;, &#x27;mixed_venous_oxygen_saturation&#x27;, &#x27;alanine_transaminase&#x27;]
+
+FINAL SUMMARY
+=======================================================
+Horizon    AUROC          Recall         SevMAE
+-------------------------------------------------------
+2hr        0.795±0.008   0.701±0.029   0.929±0.046
+4hr        0.794±0.017   0.695±0.065   0.949±0.044
+6hr        0.791±0.019   0.694±0.049   0.956±0.027
+</pre></section></div></main><footer class="site-footer"><div><span class="kicker">KEEP THE CONVERSATION GOING</span><h2>Interesting questions start with a conversation.</h2><a class="contact" href="mailto:saugatme@gmail.com">saugatme@gmail.com ↗</a></div><div class="footer-links"><a href="https://github.com/saugatme">GitHub ↗</a><a href="https://www.linkedin.com/in/saugat-bhattarai/">LinkedIn ↗</a><a href="../assets/Bhattarai_Saugat_CV.pdf">Curriculum vitae ↗</a><span>Stockholm, Sweden</span></div><p class="colophon">Saugat Bhattarai · Biomedical engineering / machine learning / data systems</p></footer></body></html>

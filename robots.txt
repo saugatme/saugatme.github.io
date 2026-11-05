@@ -1,0 +1,4 @@
+# Requests all compliant crawlers to avoid every page and file.
+# This is a voluntary crawling policy, not authentication or access control.
+User-agent: *
+Disallow: /

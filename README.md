@@ -18,3 +18,7 @@ Static HTML, CSS and JavaScript. Inter and Space Grotesk are self-hosted with th
 No installation or build step is needed. Edit a file, commit it, and push to `main`. GitHub Pages serves the files directly. `.nojekyll` disables template processing.
 
 Navigation uses ordinary links, without redirect services or a JavaScript router. The site has no analytics, login, forms or server-side database. The theme preference is stored only in the visitor's browser. A Content Security Policy limits scripts to files served by this site.
+
+## Crawling policy
+
+`robots.txt` requests that all compliant crawlers avoid the entire site, including reports and CV files. This also discourages search-engine crawling. It does not prevent direct access, enforce bot blocking or protect the public GitHub repository.

@@ -1,4 +1,5 @@
-<!doctype html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"><meta name="referrer" content="strict-origin-when-cross-origin"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Saugat Bhattarai — biomedical engineer, KTH Data-driven Health student. Selected work in medical imaging, machine learning and data engineering."><title>Forecasting changes in patient condition — Saugat Bhattarai</title><link rel="stylesheet" href="../style.css?v=20261121-curation"><script src="../theme.js"></script></head><body><a class="skip" href="#content">Skip to content</a><header class="site-header"><a class="wordmark" href="../index.html">saugat<span>.bhattarai</span><i> / </i></a><nav aria-label="Main"><a href="../index.html#work">Work</a><a href="../index.html#background">Background</a><a href="../about.html">About</a><a href="mailto:saugatme@gmail.com">Contact ↗</a><a href="https://saugatme.github.io/blog/">Writing ↗</a></nav><button class="theme-toggle" aria-label="Switch color theme" title="Switch light and dark theme">◐ <span>Theme</span></button></header><main id="content"><a class="back" href="../index.html#work">← Selected work</a><div class="page-heading"><span class="kicker">SELECTED TECHNICAL NOTES</span><h1>Forecasting changes in patient condition</h1><p class="lede">The model combines current clinical measurements with recent changes. It predicts a severity category and a binary sepsis status.</p></div><section><h2>Inputs and shared model</h2><p>Selected code excerpts from the original work, shown for reading rather than execution. Setup cells, raw data previews and training logs are omitted.</p><pre><code>class SepsisNet(nn.Module):
+<!DOCTYPE html>
+<html lang="en"><head><meta content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests" http-equiv="Content-Security-Policy"/><meta content="strict-origin-when-cross-origin" name="referrer"/><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><meta content="Saugat Bhattarai — biomedical engineer, KTH Data-driven Health student. Selected work in medical imaging, machine learning and data engineering." name="description"/><title>Forecasting changes in patient condition — Saugat Bhattarai</title><link href="../style.css?v=20261121-rights" rel="stylesheet"/><script src="../theme.js"></script></head><body><a class="skip" href="#content">Skip to content</a><header class="site-header"><a class="wordmark" href="../index.html">saugat<span>.bhattarai</span><i> / </i></a><nav aria-label="Main"><a href="../index.html#work">Work</a><a href="../index.html#background">Background</a><a href="../about.html">About</a><a href="mailto:saugatme@gmail.com">Contact ↗</a><a href="https://saugatme.github.io/blog/">Writing ↗</a></nav><button aria-label="Switch color theme" class="theme-toggle" title="Switch light and dark theme">◐ <span>Theme</span></button></header><main id="content"><a class="back" href="../index.html#work">← Selected work</a><div class="page-heading"><span class="kicker">SELECTED TECHNICAL NOTES</span><h1>Forecasting changes in patient condition</h1><p class="lede">The model combines current clinical measurements with recent changes. It predicts a severity category and a binary sepsis status.</p></div><section><h2>Inputs and shared model</h2><p>Selected code excerpts from the original work, shown for reading rather than execution. Setup cells, raw data previews and training logs are omitted.</p><pre><code>class SepsisNet(nn.Module):
     def __init__(self, input_size=51):
         super().__init__()
 
@@ -36,8 +37,8 @@
     horizon_steps = int(horizon_hours * 2)  # 2hr → 4 steps, 4hr → 8 steps, 6hr → 12 steps
     X, y_severity, y_binary = [], [], []
 
-    for patient_id in df[&#x27;id&#x27;].unique():
-        pat = (df[df[&#x27;id&#x27;] == patient_id].sort_values(&#x27;timestep&#x27;).reset_index(drop=True))
+    for patient_id in df['id'].unique():
+        pat = (df[df['id'] == patient_id].sort_values('timestep').reset_index(drop=True))
         n = len(pat)
 
         for i in range(n - horizon_steps):
@@ -45,7 +46,7 @@
             features = pat.iloc[i][ALL_FEATURES].values
 
             # Target: severity at forecast point
-            sev = pat.iloc[i + horizon_steps][&#x27;severity&#x27;]
+            sev = pat.iloc[i + horizon_steps]['severity']
 
             X.append(features)
             y_severity.append(sev)
@@ -54,4 +55,4 @@
     return (
         np.array(X,          dtype=np.float32),
         np.array(y_severity, dtype=np.float32),
-        np.array(y_binary,   dtype=np.float32),)</code></pre></section></main><footer id="contact" class="site-footer"><div><span class="kicker">KEEP THE CONVERSATION GOING</span><h2>Interesting questions start with a conversation.</h2><a class="contact" href="mailto:saugatme@gmail.com">saugatme@gmail.com ↗</a></div><div class="footer-links"><a href="https://github.com/saugatme">GitHub ↗</a><a href="https://www.linkedin.com/in/saugat-bhattarai/">LinkedIn ↗</a><a href="../assets/Bhattarai_Saugat_CV.pdf">Curriculum vitae ↗</a><span>Stockholm, Sweden</span></div><p class="colophon">Saugat Bhattarai · Biomedical engineering / machine learning / data systems</p></footer></body></html>
+        np.array(y_binary,   dtype=np.float32),)</code></pre></section></main><footer class="site-footer" id="contact"><div><span class="kicker">KEEP THE CONVERSATION GOING</span><h2>Interesting questions start with a conversation.</h2><a class="contact" href="mailto:saugatme@gmail.com">saugatme@gmail.com ↗</a></div><div class="footer-links"><a href="https://github.com/saugatme">GitHub ↗</a><a href="https://www.linkedin.com/in/saugat-bhattarai/">LinkedIn ↗</a><a href="../assets/Bhattarai_Saugat_CV.pdf">Curriculum vitae ↗</a><span>Stockholm, Sweden</span></div><p class="colophon">Saugat Bhattarai · Biomedical engineering / machine learning / data systems</p><p class="rights-note">© 2026 Saugat Bhattarai · <a href="../COPYRIGHT.txt">Rights &amp; permissions</a></p></footer></body></html>

@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"><meta name="referrer" content="strict-origin-when-cross-origin"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Saugat Bhattarai — biomedical engineer, KTH Data-driven Health student. Selected work in medical imaging, machine learning and data engineering."><title>Comparing clinical alarm classifiers — Saugat Bhattarai</title><link rel="stylesheet" href="../style.css?v=20261121-curation"><script src="../theme.js"></script></head><body><a class="skip" href="#content">Skip to content</a><header class="site-header"><a class="wordmark" href="../index.html">saugat<span>.bhattarai</span><i> / </i></a><nav aria-label="Main"><a href="../index.html#work">Work</a><a href="../index.html#background">Background</a><a href="../about.html">About</a><a href="mailto:saugatme@gmail.com">Contact ↗</a><a href="https://saugatme.github.io/blog/">Writing ↗</a></nav><button class="theme-toggle" aria-label="Switch color theme" title="Switch light and dark theme">◐ <span>Theme</span></button></header><main id="content"><a class="back" href="../index.html#work">← Selected work</a><div class="page-heading"><span class="kicker">SELECTED TECHNICAL NOTES</span><h1>Comparing clinical alarm classifiers</h1><p class="lede">Summary measurements from patient signals are used to compare simple and more flexible classifiers. Missing data and class imbalance are part of the analysis.</p></div><section><h2>Classifier comparison</h2><p>Selected code excerpts from the original work, shown for reading rather than execution. Setup cells, raw data previews and training logs are omitted.</p><pre><code># Modeling
+<!DOCTYPE html>
+<html lang="en"><head><meta content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests" http-equiv="Content-Security-Policy"/><meta content="strict-origin-when-cross-origin" name="referrer"/><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><meta content="Saugat Bhattarai — biomedical engineer, KTH Data-driven Health student. Selected work in medical imaging, machine learning and data engineering." name="description"/><title>Comparing clinical alarm classifiers — Saugat Bhattarai</title><link href="../style.css?v=20261121-rights" rel="stylesheet"/><script src="../theme.js"></script></head><body><a class="skip" href="#content">Skip to content</a><header class="site-header"><a class="wordmark" href="../index.html">saugat<span>.bhattarai</span><i> / </i></a><nav aria-label="Main"><a href="../index.html#work">Work</a><a href="../index.html#background">Background</a><a href="../about.html">About</a><a href="mailto:saugatme@gmail.com">Contact ↗</a><a href="https://saugatme.github.io/blog/">Writing ↗</a></nav><button aria-label="Switch color theme" class="theme-toggle" title="Switch light and dark theme">◐ <span>Theme</span></button></header><main id="content"><a class="back" href="../index.html#work">← Selected work</a><div class="page-heading"><span class="kicker">SELECTED TECHNICAL NOTES</span><h1>Comparing clinical alarm classifiers</h1><p class="lede">Summary measurements from patient signals are used to compare simple and more flexible classifiers. Missing data and class imbalance are part of the analysis.</p></div><section><h2>Classifier comparison</h2><p>Selected code excerpts from the original work, shown for reading rather than execution. Setup cells, raw data previews and training logs are omitted.</p><pre><code># Modeling
 models = {
-    &#x27;LogisticRegression&#x27;: LogisticRegression(max_iter=1000, random_state=RANDOM_STATE),
-    &#x27;RandomForest&#x27;: RandomForestClassifier(n_estimators=500, random_state=RANDOM_STATE, class_weight=&#x27;balanced&#x27;)}
+    'LogisticRegression': LogisticRegression(max_iter=1000, random_state=RANDOM_STATE),
+    'RandomForest': RandomForestClassifier(n_estimators=500, random_state=RANDOM_STATE, class_weight='balanced')}
 
 model_results = []
 fitted_models = {}
@@ -10,30 +11,30 @@ for name, model in models.items():
     model.fit(X_train_smote, y_train_smote)
     fitted_models[name] = model
 
-    for split_name, X_s, y_s in [(&#x27;val&#x27;, X_val_scaled, y_val), (&#x27;test&#x27;, X_test_scaled, y_test)]:
+    for split_name, X_s, y_s in [('val', X_val_scaled, y_val), ('test', X_test_scaled, y_test)]:
         y_pred = model.predict(X_s)
         y_prob = model.predict_proba(X_s)[:, 1]
         model_results.append({
-            &#x27;Model&#x27;:     name,
-            &#x27;Split&#x27;:     split_name,
-            &#x27;F1&#x27;:        np.round(f1_score(y_s, y_pred), 4),
-            &#x27;F2&#x27;:        np.round(fbeta_score(y_s, y_pred, beta=2), 4),
-            &#x27;AUC_ROC&#x27;:   np.round(roc_auc_score(y_s, y_prob), 4),
-            &#x27;Precision&#x27;: np.round(precision_score(y_s, y_pred), 4),
-            &#x27;Recall&#x27;:    np.round(recall_score(y_s, y_pred), 4),
+            'Model':     name,
+            'Split':     split_name,
+            'F1':        np.round(f1_score(y_s, y_pred), 4),
+            'F2':        np.round(fbeta_score(y_s, y_pred, beta=2), 4),
+            'AUC_ROC':   np.round(roc_auc_score(y_s, y_prob), 4),
+            'Precision': np.round(precision_score(y_s, y_pred), 4),
+            'Recall':    np.round(recall_score(y_s, y_pred), 4),
         })
 
 model_results_df = pd.DataFrame(model_results)
-print(&quot;\nModel Comparison (with SMOTE):&quot;)
+print("\nModel Comparison (with SMOTE):")
 print(model_results_df.to_string(index=False))
 
-best_model_name = (model_results_df[model_results_df[&#x27;Split&#x27;] == &#x27;val&#x27;]
-                   .sort_values(&#x27;F1&#x27;, ascending=False).iloc[0][&#x27;Model&#x27;])
+best_model_name = (model_results_df[model_results_df['Split'] == 'val']
+                   .sort_values('F1', ascending=False).iloc[0]['Model'])
 best_model = fitted_models[best_model_name]
-print(f&quot;\nBest model: {best_model_name}&quot;)</code></pre><pre><code>strategies = {
-    &#x27;mean&#x27;:   SimpleImputer(strategy=&#x27;mean&#x27;),
-    &#x27;median&#x27;: SimpleImputer(strategy=&#x27;median&#x27;),
-    &#x27;knn&#x27;:    KNNImputer(n_neighbors=5)
+print(f"\nBest model: {best_model_name}")</code></pre><pre><code>strategies = {
+    'mean':   SimpleImputer(strategy='mean'),
+    'median': SimpleImputer(strategy='median'),
+    'knn':    KNNImputer(n_neighbors=5)
 }
 
 results = []
@@ -42,30 +43,30 @@ for name, imputer in strategies.items():
     X_tr   = scaler.fit_transform(imputer.fit_transform(X_train))
     X_va   = scaler.transform(imputer.transform(X_val))
 
-    model = LogisticRegression(max_iter=1000, random_state=RANDOM_STATE, class_weight=&#x27;balanced&#x27;)
+    model = LogisticRegression(max_iter=1000, random_state=RANDOM_STATE, class_weight='balanced')
     model.fit(X_tr, y_train)
     y_pred = model.predict(X_va)
     y_prob = model.predict_proba(X_va)[:, 1]
 
     results.append({
-        &#x27;Imputer&#x27;:    name,
-        &#x27;F1_val&#x27;: f1_score(y_val, y_pred),
-        &#x27;F2_val&#x27;: fbeta_score(y_val, y_pred, beta=2),
-        &#x27;AUC_ROC_val&#x27;: roc_auc_score(y_val, y_prob),
-        &#x27;Precision_val&#x27;: precision_score(y_val, y_pred),
-        &#x27;Recall_val&#x27;: recall_score(y_val, y_pred),
+        'Imputer':    name,
+        'F1_val': f1_score(y_val, y_pred),
+        'F2_val': fbeta_score(y_val, y_pred, beta=2),
+        'AUC_ROC_val': roc_auc_score(y_val, y_prob),
+        'Precision_val': precision_score(y_val, y_pred),
+        'Recall_val': recall_score(y_val, y_pred),
     })
 
 imputation_df = pd.DataFrame(results)
-print(&quot;\nValidation Metrics by Imputation Strategy (Logistic Regression):&quot;)
+print("\nValidation Metrics by Imputation Strategy (Logistic Regression):")
 print(imputation_df.to_string(index=False))
 
-best_imputer_name = imputation_df.sort_values(&#x27;F1_val&#x27;, ascending=False).iloc[0][&#x27;Imputer&#x27;]
+best_imputer_name = imputation_df.sort_values('F1_val', ascending=False).iloc[0]['Imputer']
 best_imputer      = strategies[best_imputer_name]
-print(f&quot;\nBest imputer (by F1): {best_imputer_name}&quot;)
+print(f"\nBest imputer (by F1): {best_imputer_name}")
 
 #Apply best imputer and scale
 scaler          = StandardScaler()
 X_train_scaled  = scaler.fit_transform(best_imputer.fit_transform(X_train))
 X_val_scaled    = scaler.transform(best_imputer.transform(X_val))
-X_test_scaled   = scaler.transform(best_imputer.transform(X_test))</code></pre></section></main><footer id="contact" class="site-footer"><div><span class="kicker">KEEP THE CONVERSATION GOING</span><h2>Interesting questions start with a conversation.</h2><a class="contact" href="mailto:saugatme@gmail.com">saugatme@gmail.com ↗</a></div><div class="footer-links"><a href="https://github.com/saugatme">GitHub ↗</a><a href="https://www.linkedin.com/in/saugat-bhattarai/">LinkedIn ↗</a><a href="../assets/Bhattarai_Saugat_CV.pdf">Curriculum vitae ↗</a><span>Stockholm, Sweden</span></div><p class="colophon">Saugat Bhattarai · Biomedical engineering / machine learning / data systems</p></footer></body></html>
+X_test_scaled   = scaler.transform(best_imputer.transform(X_test))</code></pre></section></main><footer class="site-footer" id="contact"><div><span class="kicker">KEEP THE CONVERSATION GOING</span><h2>Interesting questions start with a conversation.</h2><a class="contact" href="mailto:saugatme@gmail.com">saugatme@gmail.com ↗</a></div><div class="footer-links"><a href="https://github.com/saugatme">GitHub ↗</a><a href="https://www.linkedin.com/in/saugat-bhattarai/">LinkedIn ↗</a><a href="../assets/Bhattarai_Saugat_CV.pdf">Curriculum vitae ↗</a><span>Stockholm, Sweden</span></div><p class="colophon">Saugat Bhattarai · Biomedical engineering / machine learning / data systems</p><p class="rights-note">© 2026 Saugat Bhattarai · <a href="../COPYRIGHT.txt">Rights &amp; permissions</a></p></footer></body></html>

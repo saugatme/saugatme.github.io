@@ -1,0 +1,5 @@
+Copyright 2026 Saugat Bhattarai. All rights reserved for my original text, code and visual contributions.
+
+Public access to this repository and website does not grant a general license to reuse my original work. Please contact saugatme@gmail.com to request permission.
+
+Third-party software, fonts, datasets and other materials remain subject to their own licenses. Team project materials retain the rights of their respective authors. Any rights provided by applicable law or GitHub platform terms are unaffected. This notice does not prevent technical copying of publicly displayed content.

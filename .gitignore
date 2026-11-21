@@ -1,0 +1,17 @@
+# Keep local data, drafts and credentials out of this public website.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.ipynb
+*.csv
+*.parquet
+*.xml
+__pycache__/
+.venv/
+node_modules/
+Private Writing/
+Supporting Evidence/
+*.log

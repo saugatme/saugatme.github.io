@@ -36,3 +36,7 @@ From this folder, run `python -m http.server 8894 --bind 127.0.0.1`, then open h
 Only selected public evidence belongs here. The larger local supporting-evidence archive is outside this repository. Do not commit raw clinical datasets, identifiers, credentials, private screenshots or private blog drafts. Original screenshots may represent different runs; avoid combining their numbers into a single result. The site has no analytics, account system, forms or backend. Navigation uses direct links, not redirect services. A Content Security Policy limits scripts to this site.
 
 `robots.txt` asks compliant crawlers to avoid all paths, including `/blog/`. This discourages search indexing too; it does not enforce privacy or prevent access to public files or Git history.
+
+## Rights and repository hygiene
+
+Original contributions are reserved under `COPYRIGHT.txt`; third-party licenses and team ownership remain unchanged. This public site cannot prevent copying. The comprehensive gait-cycle figure is shared between the case study and selected analysis notes, avoiding duplicate embedded image data. Unused full font files, legacy Jekyll configuration and the unused project-data catalog were removed; font licenses and active subsets are retained. `Resume.pdf` remains as a compatibility address for older CV links. Git ignores common local data and credential file types, but each change still needs review before publication.

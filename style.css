@@ -21,3 +21,5 @@ nav a,.wordmark,.theme-toggle,.button,.textlink,.footer-links a,.card-bottom a{m
 
 #project-evidence[aria-label="Gait analysis output"]{padding-top:16px!important}#project-evidence .gait-spotlight{margin-top:0}
 .dashboard-capture img[width][height]{height:340px;object-fit:cover;object-position:top}@media(max-width:600px){.dashboard-capture img[width][height]{height:220px}}
+
+.gait-spotlight img{max-height:none;width:100%;height:auto}.gait-spotlight{max-width:820px}.rights-note{grid-column:1/-1;font-size:12px;color:var(--muted);margin:0}.rights-note a{text-decoration:underline;text-underline-offset:3px}
